@@ -11,22 +11,21 @@
 1. 一键启动 MariaDB、模拟器、网关：
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File C:\Users\hzy\Documents\Codex\2026-08-03\w\work\restart_all.ps1
+   powershell -ExecutionPolicy Bypass -File D:\Codex\2026-08-03\w\work\restart_all.ps1
    ```
 
 2. 打开客户端：
 
    ```powershell
-   C:\Users\hzy\Documents\Codex\2026-08-03\w\work\SharpSCADA\SCADA\Example\CoreTest.exe
+   D:\Codex\2026-08-03\w\work\SharpSCADA\SCADA\Example\CoreTest.exe
    ```
 
 3. 验证实时数据：
    - 客户端观察 tag2 每秒变化；
    - 命令行连续查两次，结果应不同：
      ```powershell
-     python C:\Users\hzy\Documents\Codex\2026-08-03\w\outputs\query_tag.py 2 1
+     python D:\Codex\2026-08-03\w\outputs\query_tag.py 2 1
      ```
-   - 查看网关推送日志：`C:\Users\hzy\Documents\Codex\2026-08-03\w\work\gw_debug.log`
 
 ## 三、对原版项目的改动
 
@@ -37,11 +36,4 @@
 5. `restart_all.ps1`（新增/修复）：一键启动 MariaDB、模拟器、网关；修复了空参数启动网关时 PowerShell 5.1 报 ArgumentList 校验错误的问题。
 
 ## 四、其他说明
-
-- 网关编译命令：
-
-  ```powershell
-  cd C:\Users\hzy\Documents\Codex\2026-08-03\w\work\SharpSCADA
-  dotnet build SCADA\Program\CoreApp\DataService\DataService.sln --no-restore -c Debug
-  ```
 - `gw_debug.log` / `gw_dataevent.log` 是排查用的临时日志，后续可以清理。
