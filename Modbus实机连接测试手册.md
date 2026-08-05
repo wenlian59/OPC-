@@ -1,5 +1,10 @@
 # Modbus TCP 实机连接测试手册
 
+> 首次部署先运行：
+> - powershell -File <REPO_ROOT>\config\Sync-DataConfig.ps1
+> - powershell -File <REPO_ROOT>\config\Update-PathsProps.ps1
+
+
 配套文档：`S7实机连接测试手册.md`（网络/IP/TIA 基本功）、`modbus_config.sql`（数据库切换）、`modbus_probe.py`（直连探测）。
 
 ## 0. 目标
@@ -123,7 +128,7 @@ S7-1500 默认不会提供 Modbus TCP 服务，必须在 PLC 程序里用 `MB_SE
 PLC 侧下载完成后，先用探测脚本确认 502 真的能读出数据，避免把问题混到网关里：
 
 ```powershell
-python D:\Codex\2026-08-03\w\outputs\modbus_probe.py 192.168.1.1 502 3 0 6
+python <REPO_ROOT>\outputs\probes\modbus_probe.py 192.168.1.1 502 3 0 6
 ```
 
 期望结果：
@@ -151,8 +156,8 @@ pair 00005-00006 int=1078523331 float=3.14
 2. 执行配置脚本（可重复执行）：
 
    ```powershell
-   $mysql = 'D:\Codex\2026-08-03\w\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe'
-   cmd /c "`"$mysql`" --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot scada < `"D:\Codex\2026-08-03\w\outputs\modbus_config.sql`""
+   $mysql = '<REPO_ROOT>\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe'
+   powershell -File <REPO_ROOT>\outputs\config\apply_config.ps1 -Config modbus
    ```
 
    脚本做的事：
@@ -165,7 +170,7 @@ pair 00005-00006 int=1078523331 float=3.14
 3. 启动网关（或继续用 `restart_all.ps1` 一键启动；它最后校验的 tag 2 是模拟器专用的，这次忽略即可）：
 
    ```powershell
-   $gw = 'D:\Codex\2026-08-03\w\work\SharpSCADA\SCADA\Program\CoreApp\DataService\GateWay\bin\Debug\net10.0\GateWay.exe'
+   $gw = '<REPO_ROOT>\work\SharpSCADA\SCADA\Program\CoreApp\DataService\GateWay\bin\Debug\net10.0\GateWay.exe'
    Start-Process -FilePath $gw -WorkingDirectory (Split-Path $gw) -WindowStyle Hidden
    ```
 
@@ -182,9 +187,9 @@ pair 00005-00006 int=1078523331 float=3.14
 2. 通过网关读实时值：
 
    ```powershell
-   python D:\Codex\2026-08-03\w\outputs\query_tag.py 2001 1
-   python D:\Codex\2026-08-03\w\outputs\query_tag.py 2002 2
-   python D:\Codex\2026-08-03\w\outputs\query_tag.py 2004 4
+   python <REPO_ROOT>\outputs\probes\query_tag.py 2001 1
+   python <REPO_ROOT>\outputs\probes\query_tag.py 2002 2
+   python <REPO_ROOT>\outputs\probes\query_tag.py 2004 4
    ```
 
    期望：`2001` 是 `01`，`2002` 原始字节是 `d204`（1234），`2004` 原始字节是
@@ -194,18 +199,18 @@ pair 00005-00006 int=1078523331 float=3.14
 3. 打开客户端：
 
    ```powershell
-   D:\Codex\2026-08-03\w\work\SharpSCADA\SCADA\Example\CoreTest.exe
+   <REPO_ROOT>\work\SharpSCADA\SCADA\Example\CoreTest.exe
    ```
 
    在实时标签列表里找 `Modbus_*`。回 TIA 改 `iTest1`/`rTest`/`bTest`，
    客户端 1 秒内应跟着变（S7 标签 1001-1006 同时还在，可对比）。
 
 4. 归档落库：2001-2004 已配 `Archive=1 / Cycle=1000`。快速验证时把
-   `C:\DataConfig\server.xml` 和 `work\SharpSCADA\SCADA\DataConfig\server.xml`
+   `C:\DataConfig\server.xml` 和 `<REPO_ROOT>\work\SharpSCADA\SCADA\DataConfig\server.xml`
    的 `WriteCycle`、`Delay` 临时改成 `30000`，重启网关约 30 秒后查：
 
    ```powershell
-   & 'D:\Codex\2026-08-03\w\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe' --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot --database=scada --execute="SELECT ID, TIMESTAMP, VALUE FROM log_hdata WHERE ID IN (2001,2002,2003,2004) ORDER BY TIMESTAMP DESC LIMIT 20;"
+   & '<REPO_ROOT>\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe' --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot --database=scada --execute="SELECT ID, TIMESTAMP, VALUE FROM log_hdata WHERE ID IN (2001,2002,2003,2004) ORDER BY TIMESTAMP DESC LIMIT 20;"
    ```
 
    验证完把两个值调回 `600000` / `3600000` 并重启网关。
@@ -215,7 +220,7 @@ pair 00005-00006 int=1078523331 float=3.14
 回 S7：
 
 ```powershell
-cmd /c "`"$mysql`" --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot scada < `"D:\Codex\2026-08-03\w\outputs\s7_config.sql`""
+powershell -File <REPO_ROOT>\outputs\config\apply_config.ps1 -Config s7
 & $mysql --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot --database=scada --execute="UPDATE meta_group SET IsActive=b'0' WHERE GroupID=20004;"
 ```
 
