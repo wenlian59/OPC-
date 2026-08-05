@@ -159,7 +159,13 @@ pair 00005-00006 int=1078523331 float=3.14
    $mysql = '<REPO_ROOT>\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe'
    powershell -File <REPO_ROOT>\outputs\config\apply_config.ps1 -Config modbus
    ```
-
+   作者的本地机
+   本机：
+   ```powershell
+   $repo = 'D:\Codex\2026-08-03\w'
+   powershell -ExecutionPolicy Bypass -File "$repo\outputs\config\apply_config.ps1" -Config modbus
+   ```
+   
    脚本做的事：
    - `registermodule` 9 指向 `ModbusDriver.dll / ModbusTCPReader`；
    - `meta_driver` 1 的 `Server` 改为 `192.168.1.1`（`Spare1=1` 是 Modbus 单元号）；
@@ -167,13 +173,16 @@ pair 00005-00006 int=1078523331 float=3.14
    - 新建组 20004 `ModbusTest` 和标签 2001-2004（1000ms 轮询，已开归档）；
    - 不动 S7 驱动 2 和标签 1001-1006。
 
-3. 启动网关（或继续用 `restart_all.ps1` 一键启动；它最后校验的 tag 2 是模拟器专用的，这次忽略即可）：
+4. 启动网关（或继续用 `restart_all.ps1` 一键启动；它最后校验的 tag 2 是模拟器专用的，这次忽略即可）：
 
    ```powershell
    $gw = '<REPO_ROOT>\work\SharpSCADA\SCADA\Program\CoreApp\DataService\GateWay\bin\Debug\net10.0\GateWay.exe'
    Start-Process -FilePath $gw -WorkingDirectory (Split-Path $gw) -WindowStyle Hidden
    ```
-
+   一键脚本：
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File "$repo\work\restart_all.ps1"
+   ```
 ## 6. 验证
 
 1. 确认网关已经连上 PLC 的 502：
