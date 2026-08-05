@@ -1,5 +1,10 @@
 # 真实 PLC 实测链路与 SharpSCADA 迁移说明
 
+> 首次部署先运行：
+> - powershell -File <REPO_ROOT>\config\Sync-DataConfig.ps1
+> - powershell -File <REPO_ROOT>\config\Update-PathsProps.ps1
+
+
 本文档简要说明真实 PLC（S7-1500）的实测链路、相对原版 SharpSCADA 已完成的
 迁移成果、网关侧 S7 / Modbus TCP 的切换方法，以及后续扩展其他协议的大致路径。
 
@@ -96,9 +101,9 @@ DB1 为非优化数据块，12 字节，同时供 S7 和 Modbus 使用：
 
 ```powershell
 Get-Process GateWay -ErrorAction SilentlyContinue | Stop-Process -Force
-$mysql = 'D:\Codex\2026-08-03\w\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe'
-cmd /c "`"$mysql`" --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot scada < `"D:\Codex\2026-08-03\w\outputs\modbus_config.sql`""
-$gw = 'D:\Codex\2026-08-03\w\work\SharpSCADA\SCADA\Program\CoreApp\DataService\GateWay\bin\Debug\net10.0\GateWay.exe'
+$mysql = '<REPO_ROOT>\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe'
+powershell -File <REPO_ROOT>\outputs\config\apply_config.ps1 -Config modbus
+$gw = '<REPO_ROOT>\work\SharpSCADA\SCADA\Program\CoreApp\DataService\GateWay\bin\Debug\net10.0\GateWay.exe'
 Start-Process -FilePath $gw -WorkingDirectory (Split-Path $gw) -WindowStyle Hidden
 ```
 
@@ -109,7 +114,7 @@ Start-Process -FilePath $gw -WorkingDirectory (Split-Path $gw) -WindowStyle Hidd
 ### Modbus TCP → S7
 
 ```powershell
-cmd /c "`"$mysql`" --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot scada < `"D:\Codex\2026-08-03\w\outputs\s7_config.sql`""
+powershell -File <REPO_ROOT>\outputs\config\apply_config.ps1 -Config s7
 & $mysql --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot --database=scada --execute="UPDATE meta_group SET IsActive=b'0' WHERE GroupID=20004;"
 ```
 
@@ -131,18 +136,18 @@ cmd /c "`"$mysql`" --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot scada <
 
 ```powershell
 # 直连 PLC 502（不经过网关）
-python D:\Codex\2026-08-03\w\outputs\modbus_probe.py 192.168.1.1 502 3 0 6
+python <REPO_ROOT>\outputs\probes\modbus_probe.py 192.168.1.1 502 3 0 6
 
 # 通过网关读实时值
-python D:\Codex\2026-08-03\w\outputs\query_tag.py 2001 1
-python D:\Codex\2026-08-03\w\outputs\query_tag.py 2002 2
-python D:\Codex\2026-08-03\w\outputs\query_tag.py 2004 4
+python <REPO_ROOT>\outputs\probes\query_tag.py 2001 1
+python <REPO_ROOT>\outputs\probes\query_tag.py 2002 2
+python <REPO_ROOT>\outputs\probes\query_tag.py 2004 4
 
 # 连接状态
 netstat -ano | Select-String ':6543|192.168.1.1:502|192.168.1.1:102'
 
 # 归档数据
-$mysql = 'D:\Codex\2026-08-03\w\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe'
+$mysql = '<REPO_ROOT>\work\mariadb\mariadb-11.4.2-winx64\bin\mysql.exe'
 & $mysql --skip-ssl --host=127.0.0.1 --port=3306 -uroot -proot --database=scada --execute="SELECT ID, TIMESTAMP, VALUE FROM log_hdata WHERE ID IN (2001,2002,2003,2004) ORDER BY TIMESTAMP DESC LIMIT 20;"
 ```
 
@@ -169,11 +174,11 @@ SharpSCADA 的驱动是插件式的：网关通过 `registermodule` 表加载
 
 | 文件 | 用途 |
 | --- | --- |
-| `outputs\modbus_config.sql` | 切换/恢复到 Modbus TCP 实机配置 |
-| `outputs\s7_config.sql` | 切换/恢复到 S7 实机配置 |
-| `outputs\modbus_probe.py` | 直连 PLC 502 读寄存器 |
-| `outputs\query_tag.py` | 通过网关 6543 读实时标签 |
-| `outputs\Modbus实机连接测试手册.md` | Modbus TCP 实操手册 |
-| `outputs\S7实机连接测试手册.md` | S7 实操手册 |
-| `work\restart_all.ps1` | 一键启动 MariaDB/模拟器/网关 |
+| `outputs\config\modbus_config.sql` | 切换/恢复到 Modbus TCP 实机配置 |
+| `outputs\config\s7_config.sql` | 切换/恢复到 S7 实机配置 |
+| `outputs\probes\modbus_probe.py` | 直连 PLC 502 读寄存器 |
+| `outputs\probes\query_tag.py` | 通过网关 6543 读实时标签 |
+| `outputs\docs\Modbus实机连接测试手册.md` | Modbus TCP 实操手册 |
+| `outputs\docs\S7实机连接测试手册.md` | S7 实操手册 |
+| `<REPO_ROOT>\work\restart_all.ps1` | 一键启动 MariaDB/模拟器/网关 |
 | `C:\DataConfig\server.xml` | HDA 归档周期（工作区有同步副本） |
